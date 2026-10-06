@@ -2,7 +2,6 @@ package com.kevin.springai.rag.service.impl;
 
 import com.kevin.springai.rag.common.ErrorCode;
 import com.kevin.springai.rag.common.MessageConstant;
-import com.kevin.springai.rag.common.PageResult;
 import com.kevin.springai.rag.constant.PasswordConstant;
 import com.kevin.springai.rag.constant.StatusConstant;
 import com.kevin.springai.rag.context.BaseContext;
@@ -155,7 +154,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public PageResult pageQuery(UserPageQueryDTO userPageQueryDTO) {
+    public Page<User> pageQuery(UserPageQueryDTO userPageQueryDTO) {
         // 1. 构建分页参数：先按 createTime 升序，再按 id 升序
         Pageable pageable = PageRequest.of(
                 userPageQueryDTO.getPage(),
@@ -167,15 +166,9 @@ public class UserServiceImpl implements UserService {
         );
 
         // 2. 执行分页查询
-        Page<User> page = userRepository.pageQuery(
+        return userRepository.pageQuery(
                 StringUtils.hasText(userPageQueryDTO.getName()) ? userPageQueryDTO.getName() : null,
                 pageable);
-
-        // 3. 封装分页结果
-        PageResult pageResult = new PageResult();
-        pageResult.setTotal(page.getTotalElements());
-        pageResult.setRecords(page.getContent());
-        return pageResult;
     }
 
     @Override

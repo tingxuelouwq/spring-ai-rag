@@ -37,7 +37,7 @@ public interface AliOssFileService {
      * @param ids 文件 ID 列表
      * @return 操作结果
      */
-    BaseResponse<Void> deleteFiles(List<Integer> ids);
+    BaseResponse<Void> deleteFiles(List<Long> ids);
 
     /**
      * 批量下载文件
@@ -45,5 +45,13 @@ public interface AliOssFileService {
      * @param ids 文件 ID 列表
      * @return 操作结果
      */
-    BaseResponse<Void> downloadFiles(List<Integer> ids);
+    BaseResponse<Void> downloadFiles(List<Long> ids);
+
+    /**
+     * 获取单个文件的下载地址（签名 URL）
+     *
+     * @param id 文件 ID
+     * @return 签名 URL
+     */
+    String getDownloadUrl(Long id);
 }

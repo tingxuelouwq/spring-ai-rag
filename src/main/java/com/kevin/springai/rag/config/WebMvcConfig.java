@@ -25,6 +25,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private static final String[] EXCLUDE_PATHS = {
             BizConstant.API_VERSION + "/user/login",
             BizConstant.API_VERSION + "/user/register",
+            BizConstant.API_VERSION + "/knowledge/download/**",
             "/doc.html",
             "/webjars/**",
             "/swagger-resources/**",

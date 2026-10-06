@@ -137,27 +137,27 @@ const loadStoreFileData = () => {
   isLoading.value = true;
   const params = { ...queryFileDto.value, page: queryFileDto.value.page - 1 }
   queryFileApi(params)
-    .then((res) => {
-      if (res.code == 0) {
-        const data = res.data;
-        storeFileTotal.value = data.totalElements;
-        storeFileData.value = data.records;
-      } else {
+      .then((res) => {
+        if (res.code == 0) {
+          const data = res.data;
+          storeFileTotal.value = data.totalElements;
+          storeFileData.value = data.content;   // 改成 content
+        } else {
+          ElMessage({
+            type: "error",
+            message: res.message,
+          });
+        }
+      })
+      .catch((err) => {
         ElMessage({
           type: "error",
-          message: res.message,
+          message: err,
         });
-      }
-    })
-    .catch((err) => {
-      ElMessage({
-        type: "error",
-        message: err,
+      })
+      .finally(() => {
+        isLoading.value = false;
       });
-    })
-    .finally(() => {
-      isLoading.value = false;
-    });
 };
 
 const fileList = ref<UploadUserFile[]>();
@@ -183,7 +183,6 @@ const uploadFile = () => {
   isUploading.value = true;
   uploadFileApi(files)
     .then((res) => {
-      debugger;
       let code = res.data.code;
       if (code == 0) {
         ElMessage({
@@ -245,32 +244,14 @@ const deleteStoreFile = (e: any) => {
     .catch(() => {});
 };
 
-const openFilePreview = (e: any) => {
-  downloadFileApi({
-    ids: e.id,
-  })
-    .then((res) => {
-      let code = res.code;
-      if (code == 0) {
-        ElMessage({
-          type: "success",
-          message: res.data,
-        });
-        loadStoreFileData();
-      } else {
-        ElMessage({
-          type: "error",
-          message: res.message,
-        });
-      }
-    })
-    .catch((err) => {
-      ElMessage({
-        type: "error",
-        message: err,
-      });
-    });
-};
+const openFilePreview = (row: any) => {
+  const link = document.createElement('a')
+  link.href = `/api/v1/knowledge/download/${row.id}`
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
 
 const handleSizeChange = (val: number) => {
   queryFileDto.value.pageSize = val

@@ -15,7 +15,7 @@ import java.util.List;
  * OSS 文件数据访问层（Spring Data JPA）
  */
 @Repository
-public interface AliOssFileRepository extends JpaRepository<AliOssFile, Integer> {
+public interface AliOssFileRepository extends JpaRepository<AliOssFile, Long> {
 
     /**
      * 按文件名模糊分页查询
@@ -33,7 +33,7 @@ public interface AliOssFileRepository extends JpaRepository<AliOssFile, Integer>
      * @param ids ID 列表
      * @return 文件列表
      */
-    List<AliOssFile> findByIdIn(List<Integer> ids);
+    List<AliOssFile> findByIdIn(List<Long> ids);
 
     /**
      * 按 ID 列表批量删除
@@ -43,5 +43,5 @@ public interface AliOssFileRepository extends JpaRepository<AliOssFile, Integer>
      */
     @Modifying
     @Query("DELETE FROM AliOssFile f WHERE f.id IN :ids")
-    int deleteByIdIn(@Param("ids") List<Integer> ids);
+    int deleteByIdIn(@Param("ids") List<Long> ids);
 }

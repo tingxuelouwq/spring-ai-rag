@@ -24,7 +24,7 @@ public class AliOssFile {
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     /**
      * 文件名

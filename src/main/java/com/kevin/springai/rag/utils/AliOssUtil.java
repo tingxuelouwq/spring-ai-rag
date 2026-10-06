@@ -1,9 +1,10 @@
 package com.kevin.springai.rag.utils;
 
+import com.aliyun.oss.ClientException;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.OSSException;
-import com.aliyun.oss.ClientException;
+import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.aliyun.oss.model.GetObjectRequest;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;
@@ -13,9 +14,12 @@ import java.io.ByteArrayInputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 
 /**
  * 阿里云 OSS 工具类
@@ -84,13 +88,22 @@ public class AliOssUtil {
     }
 
     /**
-     * 删除文件
+     * 删除文件（按完整 URL）
      *
      * @param fileUrl 文件的完整访问地址
      * @return 删除成功返回 true
      */
     public boolean deleteOss(String fileUrl) {
-        String objectName = extractObjectName(fileUrl);
+        return deleteObject(extractObjectName(fileUrl));
+    }
+
+    /**
+     * 删除文件（按对象名）
+     *
+     * @param objectName OSS 对象名（含路径）
+     * @return 删除成功返回 true
+     */
+    public boolean deleteObject(String objectName) {
         try {
             ossClient.deleteObject(bucketName, objectName);
             log.info("文件删除成功，objectName={}", objectName);
@@ -103,6 +116,16 @@ public class AliOssUtil {
             log.error("OSS 客户端异常：message={}", ce.getMessage(), ce);
             throw ce;
         }
+    }
+
+    /**
+     * 下载文件（按完整 URL）
+     *
+     * @param fileUrl 文件的完整访问地址
+     * @return 下载后的本地文件路径
+     */
+    public String downloadByUrl(String fileUrl) {
+        return download(extractObjectName(fileUrl));
     }
 
     /**
@@ -155,7 +178,7 @@ public class AliOssUtil {
      * @param fileUrl 文件访问地址
      * @return 对象名，解析失败时返回原字符串
      */
-    private String extractObjectName(String fileUrl) {
+    public String extractObjectName(String fileUrl) {
         try {
             URL url = URI.create(fileUrl).toURL();
             return url.getPath().replaceFirst("/", "");
@@ -163,5 +186,35 @@ public class AliOssUtil {
             log.warn("文件地址解析失败，按原值作为 objectName 使用：{}", fileUrl);
             return fileUrl;
         }
+    }
+
+    /**
+     * 生成带签名的临时访问 URL，并指定下载时的文件名
+     *
+     * @param fileUrl       文件的完整访问地址
+     * @param fileName      下载时展示的文件名（原始文件名）
+     * @param expireSeconds 有效期（秒）
+     * @return 签名 URL
+     */
+    public String generatePresignedUrl(String fileUrl, String fileName, long expireSeconds) {
+        String objectName = extractObjectName(fileUrl);
+
+        Date expiration = new Date(System.currentTimeMillis() + expireSeconds * 1000L);
+
+        GeneratePresignedUrlRequest request =
+                new GeneratePresignedUrlRequest(bucketName, objectName);
+        request.setExpiration(expiration);
+
+        // 设置下载时的文件名，浏览器会以此名称保存
+        try {
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+            request.getResponseHeaders().setContentDisposition(
+                    "attachment; filename=\"" + encodedFileName + "\"");
+        } catch (Exception ex) {
+            log.warn("设置下载文件名失败，使用默认文件名，fileName={}", fileName, ex);
+        }
+
+        return ossClient.generatePresignedUrl(request).toString();
     }
 }

@@ -188,8 +188,8 @@ const loadStoreFileData = () => {
       .then((res) => {
         if (res.code == 0) {
           const data = res.data;
-          total.value = data.total;
-          userList.value = data.records;
+          total.value = data.totalElements;
+          userList.value = data.content;
         } else {
           ElMessage({
             type: "error",

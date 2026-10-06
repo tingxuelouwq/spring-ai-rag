@@ -1,7 +1,6 @@
 package com.kevin.springai.rag.controller;
 
 import com.kevin.springai.rag.common.BaseResponse;
-import com.kevin.springai.rag.common.PageResult;
 import com.kevin.springai.rag.common.ResultUtils;
 import com.kevin.springai.rag.config.JwtProperties;
 import com.kevin.springai.rag.constant.BizConstant;
@@ -18,6 +17,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -153,10 +153,10 @@ public class UserController {
      */
     @GetMapping("/page")
     @Operation(summary = "page", description = "user分页查询")
-    public BaseResponse<PageResult> page(@Validated UserPageQueryDTO userPageQueryDTO) {
+    public BaseResponse<Page<User>> page(@Validated UserPageQueryDTO userPageQueryDTO) {
         log.info("用户分页查询，参数为：{}", userPageQueryDTO);
-        PageResult pageResult = userService.pageQuery(userPageQueryDTO);
-        return ResultUtils.success(pageResult);
+        Page<User> page = userService.pageQuery(userPageQueryDTO);
+        return ResultUtils.success(page);
     }
 
     /**

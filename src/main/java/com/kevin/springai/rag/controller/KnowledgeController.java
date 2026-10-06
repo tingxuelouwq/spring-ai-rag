@@ -9,6 +9,7 @@ import com.kevin.springai.rag.entity.AliOssFile;
 import com.kevin.springai.rag.service.AliOssFileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -71,7 +73,7 @@ public class KnowledgeController {
      */
     @Operation(summary = "delete", description = "文件删除")
     @DeleteMapping("/delete")
-    public BaseResponse<Void> deleteFiles(@RequestParam List<Integer> ids) {
+    public BaseResponse<Void> deleteFiles(@RequestParam("ids") List<Long> ids) {
         return aliOssFileService.deleteFiles(ids);
     }
 
@@ -83,7 +85,23 @@ public class KnowledgeController {
      */
     @Operation(summary = "download", description = "文件下载")
     @GetMapping("/download")
-    public BaseResponse<Void> downloadFiles(@RequestParam List<Integer> ids) {
+    public BaseResponse<Void> downloadFiles(@RequestParam("ids")  List<Long> ids) {
         return aliOssFileService.downloadFiles(ids);
+    }
+
+    /**
+     * 下载单个文件
+     * <p>
+     * 重定向到 OSS 签名 URL，由浏览器直接下载，文件流不经过后端。
+     * </p>
+     *
+     * @param id       文件 ID
+     * @param response HTTP 响应
+     */
+    @Operation(summary = "download", description = "下载单个文件")
+    @GetMapping("/download/{id}")
+    public void downloadFile(@PathVariable("id") Long id, HttpServletResponse response) throws IOException {
+        String signedUrl = aliOssFileService.getDownloadUrl(id);
+        response.sendRedirect(signedUrl);
     }
 }

@@ -1,10 +1,10 @@
 package com.kevin.springai.rag.service;
 
-import com.kevin.springai.rag.common.PageResult;
 import com.kevin.springai.rag.dto.PasswordDTO;
 import com.kevin.springai.rag.dto.UserDTO;
 import com.kevin.springai.rag.dto.UserPageQueryDTO;
 import com.kevin.springai.rag.entity.User;
+import org.springframework.data.domain.Page;
 
 import javax.security.auth.login.AccountLockedException;
 import javax.security.auth.login.AccountNotFoundException;
@@ -23,7 +23,7 @@ public interface UserService {
 
     void update(User user);
 
-    PageResult pageQuery(UserPageQueryDTO userPageQueryDTO);
+    Page<User> pageQuery(UserPageQueryDTO userPageQueryDTO);
 
     void saveUser(UserDTO userDTO);
 
