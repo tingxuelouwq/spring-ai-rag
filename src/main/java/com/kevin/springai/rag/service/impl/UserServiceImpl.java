@@ -156,10 +156,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResult pageQuery(UserPageQueryDTO userPageQueryDTO) {
+        // 1. 构建分页参数：先按 createTime 升序，再按 id 升序
         Pageable pageable = PageRequest.of(
                 userPageQueryDTO.getPage(),
                 userPageQueryDTO.getPageSize(),
-                Sort.by(Sort.Direction.DESC, "createTime") // 按创建时间倒序
+                Sort.by(
+                        Sort.Order.asc("createTime"),
+                        Sort.Order.asc("id")
+                )
         );
 
         // 2. 执行分页查询

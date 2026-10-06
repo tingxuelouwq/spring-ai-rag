@@ -211,6 +211,7 @@ const loadStoreFileData = () => {
 // 处理页码改变
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
+  queryFileDto.value.page = val
   loadStoreFileData()
 }
 
@@ -218,6 +219,8 @@ const handleCurrentChange = (val: number) => {
 const handleSizeChange = (val: number) => {
   pageSize.value = val
   currentPage.value = 1
+  queryFileDto.value.page = 1
+  queryFileDto.value.pageSize = val
   loadStoreFileData()
 }
 

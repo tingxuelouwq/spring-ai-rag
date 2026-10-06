@@ -101,7 +101,7 @@ const loadLogData = async () => {
   try {
     const params = { 
       ...queryParams.value, 
-      page: queryParams.value.page - 1 
+      page: queryParams.value.page - 1
     }
     const res = await queryLogApi(params)
     if (res.code === 0) {
