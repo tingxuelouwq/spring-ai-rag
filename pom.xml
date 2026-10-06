@@ -55,6 +55,12 @@
             <artifactId>spring-ai-vector-store-advisor</artifactId>
         </dependency>
 
+        <!-- 文档解析器 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
+
         <!-- 阿里云对象存储OSS -->
         <dependency>
             <groupId>com.aliyun.oss</groupId>

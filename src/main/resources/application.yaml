@@ -47,7 +47,7 @@ spring:
           max-wait: 2000ms
 
 aliyun:
-  oss:
+  alioss:
     endpoint: oss-cn-beijing.aliyuncs.com
     access-key-id: ${ALI_OSS_ACCESSKEY_ID}
     access-key-secret: ${ALI_OSS_ACCESSKEY_SECRET}
