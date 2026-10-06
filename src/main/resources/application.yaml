@@ -23,10 +23,10 @@ spring:
           password: ${ALI_MILVUS_PASSWORD}
         database-name: default
         collection-name: vector_store
-        embedding-dimension: 1536
+        embedding-dimension: 1024
         index-type: IVF_FLAT
         metric-type: COSINE
-        initialize-schema: false
+        initialize-schema: true
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
