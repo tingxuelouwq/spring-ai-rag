@@ -1,3 +1,65 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: spring-ai-rag
+
+  ai:
+    openai:
+      api-key: ${ALI_AI_KEY}
+      base-url: https://llm-6uhvu1htgn8qsa6c.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+      chat:
+        model: qwen3.8-max-0902
+      embedding:
+        model: qwen3.7-text-embedding-flash
+
+    vectorstore:
+      milvus:
+        client:
+          host: ${ALI_MILVUS_HOST}
+          port: 19530
+          username: root
+          password: ${ALI_MILVUS_PASSWORD}
+        database-name: default
+        collection-name: vector_store
+        embedding-dimension: 1536
+        index-type: IVF_FLAT
+        metric-type: COSINE
+        initialize-schema: false
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/rag?serverTimezone=UTC
+    username: root
+    password: tttx
+
+  data:
+    redis:
+      port: 6379
+      password: tttx
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 1
+          max-wait: 2000ms
+
+aliyun:
+  oss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    access-key-id: ${ALI_OSS_ACCESSKEY_ID}
+    access-key-secret: ${ALI_OSS_ACCESSKEY_SECRET}
+    bucket-name: kb-oss-2026
+
+jwt:
+  # 设置jwt签名加密时使用的秘钥
+  admin-secret-key: rag_jwt_secret_key_for_admin_access_256_bits_required
+  # 设置jwt过期时间
+  admin-ttl: 7200000
+  # 设置前端传递过来的令牌名称
+  admin-token-name: token
+  user-secret-key: rag_jwt_secret_key_for_user_access_256_bits_required
+  user-ttl: 7200000
+  user-token-name: authorization
