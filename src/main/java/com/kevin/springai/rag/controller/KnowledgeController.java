@@ -66,7 +66,7 @@ public class KnowledgeController {
     }
 
     /**
-     * 批量删除文件
+     * 单个和批量删除文件
      *
      * @param ids 文件 ID 列表
      * @return 操作结果
@@ -75,18 +75,6 @@ public class KnowledgeController {
     @DeleteMapping("/delete")
     public BaseResponse<Void> deleteFiles(@RequestParam("ids") List<Long> ids) {
         return aliOssFileService.deleteFiles(ids);
-    }
-
-    /**
-     * 批量下载文件
-     *
-     * @param ids 文件 ID 列表
-     * @return 操作结果
-     */
-    @Operation(summary = "download", description = "文件下载")
-    @GetMapping("/download")
-    public BaseResponse<Void> downloadFiles(@RequestParam("ids")  List<Long> ids) {
-        return aliOssFileService.downloadFiles(ids);
     }
 
     /**
@@ -103,5 +91,17 @@ public class KnowledgeController {
     public void downloadFile(@PathVariable("id") Long id, HttpServletResponse response) throws IOException {
         String signedUrl = aliOssFileService.getDownloadUrl(id);
         response.sendRedirect(signedUrl);
+    }
+
+    /**
+     * 批量下载文件（打包为 ZIP）
+     *
+     * @param ids      文件 ID 列表
+     * @param response HTTP 响应
+     */
+    @Operation(summary = "downloadBatch", description = "批量下载文件（打包为 ZIP）")
+    @PostMapping("/download/batch")
+    public void downloadBatch(@RequestBody List<Long> ids, HttpServletResponse response) {
+        aliOssFileService.downloadAsZip(ids, response);
     }
 }

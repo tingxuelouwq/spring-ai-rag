@@ -8,7 +8,9 @@ import com.kevin.springai.rag.entity.AliOssFile;
 import com.kevin.springai.rag.repository.AliOssFileRepository;
 import com.kevin.springai.rag.service.AliOssFileService;
 import com.kevin.springai.rag.utils.AliOssUtil;
+import com.kevin.springai.rag.utils.DateTimeUtil;
 import com.kevin.springai.rag.utils.JsonUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -25,10 +27,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * OSS 文件服务实现
@@ -225,30 +233,84 @@ public class AliOssFileServiceImpl implements AliOssFileService {
     }
 
     @Override
-    public BaseResponse<Void> downloadFiles(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return ResultUtils.error(ErrorCode.PARAMS_ERROR, "请选择文件");
-        }
-
-        List<AliOssFile> aliOssFiles = aliOssFileRepository.findByIdIn(ids);
-        if (aliOssFiles.isEmpty()) {
-            return ResultUtils.error(ErrorCode.NOT_FOUND_ERROR, "文件不存在");
-        }
-
-        for (AliOssFile file : aliOssFiles) {
-            aliOssUtil.downloadByUrl(file.getUrl());
-        }
-
-        log.info("批量下载文件成功，count={}", aliOssFiles.size());
-        return ResultUtils.success(null, "下载成功");
-    }
-
-    @Override
     public String getDownloadUrl(Long id) {
         AliOssFile file = aliOssFileRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
 
         return aliOssUtil.generatePresignedUrl(
                 file.getUrl(), file.getFileName(), 3600);
+    }
+
+    @Override
+    public void downloadAsZip(List<Long> ids, HttpServletResponse response) {
+        // 1. 参数校验
+        if (ids == null || ids.isEmpty()) {
+            throw new RuntimeException("请选择文件");
+        }
+
+        List<AliOssFile> files = aliOssFileRepository.findByIdIn(ids);
+        if (files.isEmpty()) {
+            throw new RuntimeException("文件不存在");
+        }
+
+        // 2. 设置响应头
+        String zipFileName = "files_" + DateTimeUtil.nowCompact() + ".zip";
+        response.setContentType("application/zip");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + zipFileName + "\"");
+
+        // 3. 边读 OSS 流边写入 ZIP
+        try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+            Set<String> usedNames = new HashSet<>();
+
+            for (AliOssFile file : files) {
+                String objectName = aliOssUtil.extractObjectName(file.getUrl());
+                String entryName = uniqueName(file.getFileName(), usedNames);
+
+                ZipEntry zipEntry = new ZipEntry(entryName);
+                zos.putNextEntry(zipEntry);
+
+                try (InputStream in = aliOssUtil.getObjectStream(objectName)) {
+                    in.transferTo(zos);
+                } catch (Exception ex) {
+                    log.error("打包文件失败，objectName={}", objectName, ex);
+                }
+
+                zos.closeEntry();
+            }
+            zos.finish();
+            log.info("ZIP 打包下载完成，文件数={}", files.size());
+        } catch (IOException ex) {
+            log.error("ZIP 打包失败", ex);
+            throw new RuntimeException("文件下载失败", ex);
+        }
+    }
+
+    /**
+     * 生成不重复的文件名，避免 ZIP 内同名冲突
+     *
+     * @param fileName  原始文件名
+     * @param usedNames 已使用的文件名集合
+     * @return 唯一的文件名
+     */
+    private String uniqueName(String fileName, Set<String> usedNames) {
+        if (!usedNames.contains(fileName)) {
+            usedNames.add(fileName);
+            return fileName;
+        }
+        int dotIndex = fileName.lastIndexOf('.');
+        String baseName = dotIndex == -1 ? fileName : fileName.substring(0, dotIndex);
+        String extension = dotIndex == -1 ? "" : fileName.substring(dotIndex);
+
+        int index = 1;
+        String newName;
+        do {
+            newName = baseName + "(" + index + ")" + extension;
+            index++;
+        } while (usedNames.contains(newName));
+
+        usedNames.add(newName);
+        return newName;
     }
 }

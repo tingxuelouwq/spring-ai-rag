@@ -117,7 +117,7 @@
 
 <script setup lang="ts">
 import { type UploadUserFile, ElMessage, ElMessageBox } from "element-plus";
-import {uploadFileApi, queryFileApi, deleteFileApi, downloadFileApi} from "@/api/KnowHubApi";
+import {uploadFileApi, queryFileApi, deleteFileApi, downloadBatchApi} from "@/api/KnowHubApi";
 import { StoreFile } from "@/api/data";
 import { QueryFileDto } from "@/api/dto";
 import { format } from "date-fns";
@@ -304,34 +304,37 @@ const batchDelete = () => {
     })
     .catch(() => {});
 }
-const batchDownload = () => {
+
+const batchDownload = async () => {
   if (selectedFiles.value.length === 0) return
 
-  const ids = selectedFiles.value.map(file => file.id).join(',')
-  downloadFileApi({
-    ids: ids,
-  })
-    .then((res) => {
-      if (res.code == 0) {
-        ElMessage({
-          type: "success",
-          message: res.data,
-        });
-        selectedFiles.value = [];
-        loadStoreFileData();
-      } else {
-        ElMessage({
-          type: "error",
-          message: res.message,
-        });
-      }
-    })
-    .catch((err) => {
-      ElMessage({
-        type: "error",
-        message: err,
-      });
-    });
+  const ids = selectedFiles.value.map(file => file.id)
+  try {
+    const response = await downloadBatchApi(ids) as any
+    const blob = new Blob([response], { type: 'application/zip' })
+    const url = window.URL.createObjectURL(blob)
+
+    // 生成时间戳字符串：yyyyMMddHHmmss
+    const now = new Date()
+    const timestamp = now.getFullYear().toString()
+        + String(now.getMonth() + 1).padStart(2, '0')
+        + String(now.getDate()).padStart(2, '0')
+        + String(now.getHours()).padStart(2, '0')
+        + String(now.getMinutes()).padStart(2, '0')
+        + String(now.getSeconds()).padStart(2, '0')
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `知识库文件_${timestamp}.zip`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('下载已开始')
+  } catch (err) {
+    console.error('批量下载失败:', err)
+    ElMessage.error('下载失败，请稍后重试')
+  }
 }
 
 onMounted(() => {

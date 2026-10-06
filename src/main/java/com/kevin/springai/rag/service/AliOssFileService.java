@@ -3,6 +3,7 @@ package com.kevin.springai.rag.service;
 import com.kevin.springai.rag.common.BaseResponse;
 import com.kevin.springai.rag.dto.QueryFileDTO;
 import com.kevin.springai.rag.entity.AliOssFile;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -40,18 +41,18 @@ public interface AliOssFileService {
     BaseResponse<Void> deleteFiles(List<Long> ids);
 
     /**
-     * 批量下载文件
-     *
-     * @param ids 文件 ID 列表
-     * @return 操作结果
-     */
-    BaseResponse<Void> downloadFiles(List<Long> ids);
-
-    /**
      * 获取单个文件的下载地址（签名 URL）
      *
      * @param id 文件 ID
      * @return 签名 URL
      */
     String getDownloadUrl(Long id);
+
+    /**
+     * 批量下载文件并打包为 ZIP
+     *
+     * @param ids      文件 ID 列表
+     * @param response HTTP 响应
+     */
+    void downloadAsZip(List<Long> ids, HttpServletResponse response);
 }

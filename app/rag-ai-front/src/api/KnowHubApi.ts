@@ -1,7 +1,7 @@
 import { KnowApi } from "./common";
 import { BASE_URL } from "@/http/config";
 import axios from "axios";
-import { DownloadFileDto,DeleteFileDto, QueryFileDto } from "./dto";
+import { DeleteFileDto, QueryFileDto } from "./dto";
 import service from "@/http";
 import handleAuthError from "@/api/authUtils";
 
@@ -73,9 +73,11 @@ export const deleteFileApi = async (params: DeleteFileDto): Promise<Res> => {
   });
 };
 
-// 下载指定ID列表的知识库
-export const downloadFileApi = async (params: DownloadFileDto): Promise<Res> => {
-  return service.get(KnowApi.DownloadFile, {
-    params,
-  });
-};
+/**
+ * 批量下载文件（返回 ZIP 流）
+ */
+export const downloadBatchApi = (ids: number[]) => {
+  return service.post(KnowApi.DownloadFileBatch, ids, {
+    responseType: 'blob'  // 关键：接收二进制流
+  })
+}

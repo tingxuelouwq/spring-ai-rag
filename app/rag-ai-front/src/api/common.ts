@@ -6,6 +6,7 @@ export const enum KnowApi {
   QueryFile = "/knowledge/contents",
   DeleteFile = "/knowledge/delete",
   DownloadFile = "/knowledge/download",
+  DownloadFileBatch = "/knowledge/download/batch"
 }
 
 export const enum ChatApi {

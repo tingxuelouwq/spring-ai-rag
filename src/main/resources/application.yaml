@@ -48,7 +48,7 @@ spring:
 
 aliyun:
   alioss:
-    endpoint: oss-cn-beijing.aliyuncs.com
+    endpoint: https://oss-cn-beijing.aliyuncs.com
     access-key-id: ${ALI_OSS_ACCESSKEY_ID}
     access-key-secret: ${ALI_OSS_ACCESSKEY_SECRET}
     bucket-name: kb-oss-2026

@@ -6,11 +6,13 @@ import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.aliyun.oss.model.GetObjectRequest;
+import com.aliyun.oss.model.OSSObject;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -82,7 +84,9 @@ public class AliOssUtil {
             throw ce;
         }
 
-        String url = "https://" + bucketName + "." + endpoint + "/" + objectName;
+        // 去掉 endpoint 的协议前缀，只保留域名部分
+        String domain = endpoint.replaceFirst("^https?://", "");
+        String url = "https://" + bucketName + "." + domain + "/" + objectName;
         log.info("文件上传成功，url={}", url);
         return url;
     }
@@ -216,5 +220,16 @@ public class AliOssUtil {
         }
 
         return ossClient.generatePresignedUrl(request).toString();
+    }
+
+    /**
+     * 获取 OSS 文件流
+     *
+     * @param objectName OSS 对象名
+     * @return 文件输入流，使用后需关闭
+     */
+    public InputStream getObjectStream(String objectName) {
+        OSSObject ossObject = ossClient.getObject(bucketName, objectName);
+        return ossObject.getObjectContent();
     }
 }
