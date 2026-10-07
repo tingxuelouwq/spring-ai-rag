@@ -1,5 +1,7 @@
 package com.kevin.springai.rag.common;
 
+import com.kevin.springai.rag.enums.ErrorCode;
+
 /**
  * 响应结果构造工具
  */

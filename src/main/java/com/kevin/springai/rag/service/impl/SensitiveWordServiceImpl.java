@@ -1,6 +1,6 @@
 package com.kevin.springai.rag.service.impl;
 
-import com.kevin.springai.rag.common.ErrorCode;
+import com.kevin.springai.rag.enums.ErrorCode;
 import com.kevin.springai.rag.dto.SensitiveWordPageQueryDTO;
 import com.kevin.springai.rag.entity.SensitiveWord;
 import com.kevin.springai.rag.exception.BusinessException;

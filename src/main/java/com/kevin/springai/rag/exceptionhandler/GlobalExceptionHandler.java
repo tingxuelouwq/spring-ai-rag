@@ -1,7 +1,7 @@
 package com.kevin.springai.rag.exceptionhandler;
 
 import com.kevin.springai.rag.common.BaseResponse;
-import com.kevin.springai.rag.common.ErrorCode;
+import com.kevin.springai.rag.enums.ErrorCode;
 import com.kevin.springai.rag.common.ResultUtils;
 import com.kevin.springai.rag.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;

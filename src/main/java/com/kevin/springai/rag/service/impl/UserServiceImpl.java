@@ -1,7 +1,7 @@
 package com.kevin.springai.rag.service.impl;
 
-import com.kevin.springai.rag.common.ErrorCode;
-import com.kevin.springai.rag.common.MessageConstant;
+import com.kevin.springai.rag.enums.ErrorCode;
+import com.kevin.springai.rag.constant.MessageConstant;
 import com.kevin.springai.rag.constant.PasswordConstant;
 import com.kevin.springai.rag.constant.StatusConstant;
 import com.kevin.springai.rag.context.BaseContext;

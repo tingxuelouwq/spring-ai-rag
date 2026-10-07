@@ -1,4 +1,4 @@
-package com.kevin.springai.rag.common;
+package com.kevin.springai.rag.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

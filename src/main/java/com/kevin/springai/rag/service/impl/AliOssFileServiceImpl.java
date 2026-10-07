@@ -1,15 +1,18 @@
 package com.kevin.springai.rag.service.impl;
 
 import com.kevin.springai.rag.common.BaseResponse;
-import com.kevin.springai.rag.common.ErrorCode;
 import com.kevin.springai.rag.common.ResultUtils;
 import com.kevin.springai.rag.dto.QueryFileDTO;
 import com.kevin.springai.rag.entity.AliOssFile;
+import com.kevin.springai.rag.enums.ChunkStrategy;
+import com.kevin.springai.rag.enums.ErrorCode;
 import com.kevin.springai.rag.repository.AliOssFileRepository;
 import com.kevin.springai.rag.service.AliOssFileService;
+import com.kevin.springai.rag.service.DocumentChunkService;
 import com.kevin.springai.rag.utils.AliOssUtil;
 import com.kevin.springai.rag.utils.DateTimeUtil;
 import com.kevin.springai.rag.utils.JsonUtils;
+import com.kevin.springai.rag.vo.ChunkPreviewVO;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,10 +55,10 @@ public class AliOssFileServiceImpl implements AliOssFileService {
     private final TokenTextSplitter tokenTextSplitter;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void uploadFiles(List<MultipartFile> files) {
+    @Transactional
+    public void uploadFiles(List<MultipartFile> files, ChunkStrategy strategy) {
         for (MultipartFile file : files) {
-            processSingleFile(file);
+            processSingleFile(file, strategy);
         }
     }
 
@@ -67,7 +70,7 @@ public class AliOssFileServiceImpl implements AliOssFileService {
      *
      * @param file 上传的文件
      */
-    private void processSingleFile(MultipartFile file) {
+    private void processSingleFile(MultipartFile file, ChunkStrategy strategy) {
         // 原始文件名
         String originalFilename = file.getOriginalFilename();
         if (!StringUtils.hasText(originalFilename)) {
@@ -89,19 +92,24 @@ public class AliOssFileServiceImpl implements AliOssFileService {
             TikaDocumentReader reader = new TikaDocumentReader(resource);
             List<Document> documents = reader.read();
 
-            // 3. 分词
-            List<Document> splitDocuments = tokenTextSplitter.apply(documents);
+            // 3. 按指定策略分片
+            List<Document> splitDocuments = documentChunkService.split(documents, strategy);
             if (splitDocuments.isEmpty()) {
                 throw new RuntimeException("文件内容为空，无法向量化：" + originalFilename);
             }
 
-            // 4. 向量化并保存
+            // 4. 给每个分片设置来源文件名
+            for (Document doc : splitDocuments) {
+                doc.getMetadata().put("source", originalFilename);
+            }
+
+            // 5. 向量化并保存
             vectorStore.add(splitDocuments);
             vectorIds = splitDocuments.stream()
                     .map(Document::getId)
                     .collect(Collectors.toList());
 
-            // 5. 持久化文件记录
+            // 6. 持久化文件记录
             LocalDateTime now = LocalDateTime.now();
             AliOssFile aliOssFile = AliOssFile.builder()
                     .fileName(originalFilename)
@@ -319,5 +327,20 @@ public class AliOssFileServiceImpl implements AliOssFileService {
 
         usedNames.add(newName);
         return newName;
+    }
+
+    private final DocumentChunkService documentChunkService;
+
+    @Override
+    public List<ChunkPreviewVO> previewChunks(MultipartFile file, ChunkStrategy strategy) {
+        try {
+            Resource resource = file.getResource();
+            TikaDocumentReader reader = new TikaDocumentReader(resource);
+            List<Document> documents = reader.read();
+            return documentChunkService.preview(documents, strategy);
+        } catch (Exception ex) {
+            log.error("分片预览失败，fileName={}", file.getOriginalFilename(), ex);
+            throw new RuntimeException("分片预览失败", ex);
+        }
     }
 }

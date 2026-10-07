@@ -3,6 +3,8 @@ package com.kevin.springai.rag.service;
 import com.kevin.springai.rag.common.BaseResponse;
 import com.kevin.springai.rag.dto.QueryFileDTO;
 import com.kevin.springai.rag.entity.AliOssFile;
+import com.kevin.springai.rag.enums.ChunkStrategy;
+import com.kevin.springai.rag.vo.ChunkPreviewVO;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,7 +24,7 @@ public interface AliOssFileService {
      *
      * @param files 上传的文件列表
      */
-    void uploadFiles(List<MultipartFile> files);
+    void uploadFiles(List<MultipartFile> files, ChunkStrategy strategy);
 
     /**
      * 分页查询文件
@@ -63,4 +65,13 @@ public interface AliOssFileService {
      * @return 签名 URL
      */
     String getPreviewUrl(Long id);
+
+    /**
+     * 分片预览
+     *
+     * @param file     上传的文件
+     * @param strategy 分片策略
+     * @return 分片预览列表
+     */
+    List<ChunkPreviewVO> previewChunks(MultipartFile file, ChunkStrategy strategy);
 }

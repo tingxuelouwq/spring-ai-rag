@@ -1,4 +1,4 @@
-package com.kevin.springai.rag.common;
+package com.kevin.springai.rag.constant;
 
 /**
  * 信息提示常量

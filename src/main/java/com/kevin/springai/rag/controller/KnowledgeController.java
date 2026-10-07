@@ -1,12 +1,14 @@
 package com.kevin.springai.rag.controller;
 
 import com.kevin.springai.rag.common.BaseResponse;
-import com.kevin.springai.rag.common.ErrorCode;
 import com.kevin.springai.rag.common.ResultUtils;
 import com.kevin.springai.rag.constant.BizConstant;
 import com.kevin.springai.rag.dto.QueryFileDTO;
 import com.kevin.springai.rag.entity.AliOssFile;
+import com.kevin.springai.rag.enums.ChunkStrategy;
+import com.kevin.springai.rag.enums.ErrorCode;
 import com.kevin.springai.rag.service.AliOssFileService;
+import com.kevin.springai.rag.vo.ChunkPreviewVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,19 +39,22 @@ public class KnowledgeController {
     /**
      * 上传附件
      * <p>
-     * 完成文件上传 OSS、文本向量化、持久化数据库的完整流程。
+     * 完成文件上传 OSS、按指定策略分片、向量化、持久化数据库的完整流程。
      * </p>
      *
-     * @param files 上传的文件列表
+     * @param files    上传的文件列表
+     * @param strategy 分片策略，默认 token
      * @return 操作结果
      */
     @Operation(summary = "upload", description = "上传附件接口")
     @PostMapping(value = "file/upload", headers = "content-type=multipart/form-data")
-    public BaseResponse<Void> upload(@RequestParam("file") List<MultipartFile> files) {
+    public BaseResponse<Void> upload(
+            @RequestParam("file") List<MultipartFile> files,
+            @RequestParam(value = "strategy", defaultValue = "token") String strategy) {
         if (files == null || files.isEmpty()) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, "请上传文件");
         }
-        aliOssFileService.uploadFiles(files);
+        aliOssFileService.uploadFiles(files, ChunkStrategy.fromCode(strategy));
         return ResultUtils.success(null, "文件上传成功");
     }
 
@@ -119,5 +124,27 @@ public class KnowledgeController {
     public void previewFile(@PathVariable("id") Long id, HttpServletResponse response) throws IOException {
         String signedUrl = aliOssFileService.getPreviewUrl(id);
         response.sendRedirect(signedUrl);
+    }
+
+    /**
+     * 分片预览
+     * <p>
+     * 上传文件后，按指定策略分片，返回分片结果供用户预览，不写入向量库。
+     * </p>
+     *
+     * @param file     上传的文件
+     * @param strategy 分片策略，默认 token
+     * @return 分片预览列表
+     */
+    @Operation(summary = "chunkPreview", description = "分片预览")
+    @PostMapping(value = "/chunk/preview", headers = "content-type=multipart/form-data")
+    public BaseResponse<List<ChunkPreviewVO>> chunkPreview(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "strategy", defaultValue = "token") String strategy) {
+        if (file == null || file.isEmpty()) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, "请上传文件");
+        }
+        List<ChunkPreviewVO> preview = aliOssFileService.previewChunks(file, ChunkStrategy.fromCode(strategy));
+        return ResultUtils.success(preview);
     }
 }

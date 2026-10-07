@@ -1,5 +1,6 @@
 package com.kevin.springai.rag.common;
 
+import com.kevin.springai.rag.enums.ErrorCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

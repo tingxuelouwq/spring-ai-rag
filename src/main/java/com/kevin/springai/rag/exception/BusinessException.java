@@ -1,6 +1,6 @@
 package com.kevin.springai.rag.exception;
 
-import com.kevin.springai.rag.common.ErrorCode;
+import com.kevin.springai.rag.enums.ErrorCode;
 import lombok.Getter;
 
 @Getter

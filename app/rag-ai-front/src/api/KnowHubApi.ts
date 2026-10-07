@@ -47,16 +47,6 @@ fileService.interceptors.response.use(
   }
 );
 
-// 上传知识库接口
-export const uploadFileApi = async (filesList: File[]): Promise<Res> => {
-  let formData = new FormData();
-  filesList.map((e) => {
-    formData.append("file", e);
-  });
-
-  return fileService.post(KnowApi.UploadFile, formData);
-};
-
 // 查询所有知识库接口
 export const queryFileApi = async (params: QueryFileDto): Promise<Res> => {
   console.log("请求参数：", params);
@@ -79,5 +69,29 @@ export const deleteFileApi = async (params: DeleteFileDto): Promise<Res> => {
 export const downloadBatchApi = (ids: number[]) => {
   return service.post(KnowApi.DownloadFileBatch, ids, {
     responseType: 'blob'  // 关键：接收二进制流
+  })
+}
+
+/**
+ * 上传文件（支持指定分片策略）
+ */
+export const uploadFileApi = async (files: File[], strategy: string = 'token') => {
+  const formData = new FormData()
+  files.forEach(file => formData.append('file', file))
+  formData.append('strategy', strategy)
+  return service.post('/knowledge/file/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+/**
+ * 分片预览
+ */
+export const previewChunkApi = async (file: File, strategy: string = 'token') => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('strategy', strategy)
+  return service.post('/knowledge/chunk/preview', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
