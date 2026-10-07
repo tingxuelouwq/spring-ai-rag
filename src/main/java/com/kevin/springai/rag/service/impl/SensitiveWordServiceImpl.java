@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -101,5 +102,20 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
         sensitiveWordRepository.save(word);
 
         log.info("敏感词状态更新成功，id={}，status={}", id, status);
+    }
+
+    @Override
+    public String findHitWord(String text) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        // 只查启用状态的敏感词
+        List<SensitiveWord> words = sensitiveWordRepository.findByStatus("1");
+        for (SensitiveWord word : words) {
+            if (text.contains(word.getWord())) {
+                return word.getWord();
+            }
+        }
+        return null;
     }
 }

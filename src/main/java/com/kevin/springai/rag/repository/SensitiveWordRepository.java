@@ -24,4 +24,6 @@ public interface SensitiveWordRepository extends JpaRepository<SensitiveWord, Lo
     @Modifying
     @Query("DELETE FROM SensitiveWord s WHERE s.id IN :ids")
     int deleteByIdIn(@Param("ids") List<Long> ids);
+
+    List<SensitiveWord> findByStatus(String status);
 }

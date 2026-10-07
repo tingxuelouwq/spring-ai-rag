@@ -33,4 +33,9 @@ public interface SensitiveWordService {
      * 启用/禁用敏感词
      */
     void startOrStop(String status, Long id);
+
+    /**
+     * 敏感词过滤
+     */
+    String findHitWord(String message);
 }
