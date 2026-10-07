@@ -104,4 +104,20 @@ public class KnowledgeController {
     public void downloadBatch(@RequestBody List<Long> ids, HttpServletResponse response) {
         aliOssFileService.downloadAsZip(ids, response);
     }
+
+    /**
+     * 预览单个文件
+     * <p>
+     * 重定向到 OSS 签名 URL，浏览器内联打开。
+     * </p>
+     *
+     * @param id       文件 ID
+     * @param response HTTP 响应
+     */
+    @Operation(summary = "preview", description = "预览单个文件")
+    @GetMapping("/preview/{id}")
+    public void previewFile(@PathVariable("id") Long id, HttpServletResponse response) throws IOException {
+        String signedUrl = aliOssFileService.getPreviewUrl(id);
+        response.sendRedirect(signedUrl);
+    }
 }

@@ -55,4 +55,12 @@ public interface AliOssFileService {
      * @param response HTTP 响应
      */
     void downloadAsZip(List<Long> ids, HttpServletResponse response);
+
+    /**
+     * 获取单个文件的预览地址（内联打开）
+     *
+     * @param id 文件 ID
+     * @return 签名 URL
+     */
+    String getPreviewUrl(Long id);
 }

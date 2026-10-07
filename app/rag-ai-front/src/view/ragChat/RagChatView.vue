@@ -5,7 +5,11 @@
         <div v-for="(message, index) in messages" :key="index" 
              :class="['message', message.role === 'user' ? 'user-message' : 'assistant-message']">
           <div class="message-wrapper">
-            <div class="message-content" :class="{ 'typing': message.isTyping }" v-html="renderMarkdown(message.content)">
+            <div
+                class="message-content"
+                :class="{ 'typing': message.isTyping }"
+                v-html="renderMarkdown(message.content, index)"
+            >
             </div>
             
             <el-button
@@ -16,6 +20,20 @@
             >
               <el-icon><Document /></el-icon>
             </el-button>
+          </div>
+
+          <!-- 引用文档 -->
+          <div v-if="message.sources && message.sources.length > 0" class="message-sources">
+            <span class="sources-label">引用文档：</span>
+            <div
+                v-for="(source, idx) in message.sources"
+                :key="idx"
+                class="source-item"
+                @click="handleSourceClick(source)"
+            >
+              <span class="source-index">[{{ idx + 1 }}]</span>
+              <span class="source-name">{{ source }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -96,7 +114,6 @@ import { ChatApi, type ChatMessage } from '@/api/ChatApi'
 import { getStreamChat } from '@/api/StreamApi'
 import { queryFileApi } from '@/api/KnowHubApi'
 import { StoreFile } from '@/api/data'
- 
 
 const messages = ref<ChatMessage[]>([])
 const userInput = ref('')
@@ -104,6 +121,13 @@ const isLoading = ref(false)
 const messageContainer = ref<HTMLElement | null>(null)
 const knowledgeFiles = ref<StoreFile[]>([])
 const selectedFiles = ref<string[]>([])
+
+const handleSourceClick = (fileName: string) => {
+  const file = knowledgeFiles.value.find(f => f.fileName === fileName)
+  if (file) {
+    window.open(`/api/v1/knowledge/preview/${file.id}`, '_blank')
+  }
+}
 
 // 加载知识库文件列表
 const loadKnowledgeFiles = () => {
@@ -117,7 +141,7 @@ const loadKnowledgeFiles = () => {
     .then((res) => {
       if (res.code == 0) {
         const data = res.data;
-        knowledgeFiles.value = data.records || [];
+        knowledgeFiles.value = data.content || [];
       } else {
         ElMessage({
           type: 'error',
@@ -132,6 +156,20 @@ const loadKnowledgeFiles = () => {
       });
     });
 };
+
+// 从回答内容中提取引用来源
+const extractSources = (content: string): string[] => {
+  const regex = /\[来源:\s*([^\]]+)\]/g
+  const sources: string[] = []
+  let match
+  while ((match = regex.exec(content)) !== null) {
+    const source = match[1].trim()
+    if (source && !sources.includes(source)) {
+      sources.push(source)
+    }
+  }
+  return sources
+}
 
 // 处理普通对话
 const handleSend = async () => {
@@ -202,6 +240,8 @@ const sendMessage = async (url: string, selectedFileIds: string[] = []) => {
     }, () => { 
       isLoading.value = false
       reactiveMessage.isTyping = false
+      // 提取引用来源
+      reactiveMessage.sources = extractSources(reactiveMessage.content)
     }, fileSources)
   } else {
     // 无文件选择时，不传递sources参数
@@ -226,6 +266,8 @@ const sendMessage = async (url: string, selectedFileIds: string[] = []) => {
     }, () => { 
       isLoading.value = false
       reactiveMessage.isTyping = false
+      // 提取引用来源
+      reactiveMessage.sources = extractSources(reactiveMessage.content)
     })
   }
 };
@@ -271,13 +313,39 @@ const clearMessages = () => {
   }]
 }
 
-// Markdown渲染
-const renderMarkdown = (content: string) => {
+// 存储当前消息的引用映射
+const sourceIndexMap = ref<Record<string, number>>({})
+
+const renderMarkdown = (content: string, messageIndex: number) => {
   try {
-    return marked(content, {
-      breaks: true,
-      gfm: true
+    // 1. 先提取并编号来源
+    const sources: string[] = []
+    const sourceMap: Record<string, number> = {}
+    const regex = /\[来源[:：]\s*([^\]]+)\]/g
+    let match
+    while ((match = regex.exec(content)) !== null) {
+      const source = match[1].trim()
+      if (!sourceMap[source]) {
+        sources.push(source)
+        sourceMap[source] = sources.length
+      }
+    }
+
+    // 2. 把 [来源: xxx] 替换成角标 <sup>
+    let html = content.replace(regex, (_, source) => {
+      const idx = sourceMap[source.trim()]
+      return `<sup class="source-ref" data-source="${source.trim()}" title="来源: ${source.trim()}">[${idx}]</sup>`
     })
+
+    // 3. 再走 marked 渲染 Markdown
+    html = marked(html, { breaks: true, gfm: true })
+
+    // 4. 存储映射，供底部图例使用
+    if (sources.length > 0) {
+      sourceIndexMap.value[messageIndex] = sourceMap as any
+    }
+
+    return html
   } catch (error) {
     console.error('Markdown parsing error:', error)
     return content
@@ -506,6 +574,67 @@ onMounted(() => {
   33% { content: '..'; }
   66% { content: '...'; }
   100% { content: '.'; }
+}
+
+/* 新增：引用文档区域 */
+/* 正文里的角标 */
+:deep(.source-ref) {
+  display: inline-block;
+  color: #409EFF;
+  font-size: 10px;
+  font-weight: bold;
+  background-color: #ecf5ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 3px;
+  padding: 0 3px;
+  margin: 0 2px;
+  cursor: pointer;
+  vertical-align: super;
+  line-height: 1.2;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #409EFF;
+    color: white;
+  }
+}
+
+/* 底部图例 */
+.message-sources {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background-color: #f8f9fa;
+  border-left: 3px solid #409EFF;
+  border-radius: 4px;
+  font-size: 12px;
+
+  .sources-label {
+    color: #909399;
+    margin-right: 8px;
+  }
+
+  .source-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 10px;
+    margin-bottom: 5px;
+    cursor: pointer;
+
+    &:hover .source-name {
+      color: #409EFF;
+      text-decoration: underline;
+    }
+  }
+
+  .source-index {
+    color: #409EFF;
+    font-weight: bold;
+    margin-right: 4px;
+  }
+
+  .source-name {
+    color: #606266;
+  }
 }
 
 .copy-button {

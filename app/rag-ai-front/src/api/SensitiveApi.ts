@@ -52,7 +52,7 @@ export const addSensitiveApi = async (data: SensitiveAddDto): Promise<Res> => {
 
 // 批量删除
 export const batchDeleteSensitiveApi = async (ids: number[]): Promise<Res> => {
-  return service.post(SensitiveApi.BatchDelete, ids);
+  return service.delete(SensitiveApi.BatchDelete, { data: ids });
 };
 
 // 新增敏感词分类

@@ -26,6 +26,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
             BizConstant.API_VERSION + "/user/login",
             BizConstant.API_VERSION + "/user/register",
             BizConstant.API_VERSION + "/knowledge/download/**",
+            BizConstant.API_VERSION + "/knowledge/preview/**",
             "/doc.html",
             "/webjars/**",
             "/swagger-resources/**",

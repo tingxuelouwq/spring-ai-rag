@@ -287,6 +287,13 @@ public class AliOssFileServiceImpl implements AliOssFileService {
         }
     }
 
+    @Override
+    public String getPreviewUrl(Long id) {
+        AliOssFile file = aliOssFileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("文件不存在"));
+        return aliOssUtil.generatePreviewUrl(file.getUrl(), file.getFileName(), 3600);
+    }
+
     /**
      * 生成不重复的文件名，避免 ZIP 内同名冲突
      *

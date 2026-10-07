@@ -8,9 +8,10 @@ export const ChatApi = {
 
 // 聊天消息接口
 export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  isTyping?: boolean;
+  role: 'user' | 'assistant'
+  content: string
+  isTyping?: boolean
+  sources?: string[]   // 引用文档列表
 }
 
 // 发送消息接口 (传统fetch方式)

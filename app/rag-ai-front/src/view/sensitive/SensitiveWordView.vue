@@ -4,10 +4,10 @@
       <!-- 工具栏 -->
       <div class="table-header">
         <el-button type="primary" @click="handleAdd">新增敏感词</el-button>
-        <el-button 
-          type="danger" 
-          :disabled="selectedIds.length === 0" 
-          @click="handleBatchDelete"
+        <el-button
+            type="danger"
+            :disabled="selectedIds.length === 0"
+            @click="handleBatchDelete()"
         >
           批量删除
         </el-button>

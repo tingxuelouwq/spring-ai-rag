@@ -1,6 +1,6 @@
 package com.kevin.springai.rag.controller;
 
-import com.kevin.springai.rag.advisor.MyLoggingAdvisor;
+import com.kevin.springai.rag.advisor.MetadataAwareQuestionAnswerAdvisor;
 import com.kevin.springai.rag.annotation.Loggable;
 import com.kevin.springai.rag.constant.BizConstant;
 import com.kevin.springai.rag.context.BaseContext;
@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -62,7 +63,8 @@ public class AiRagController {
         this.chatClient = ChatClient.builder(chatModel)
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        MyLoggingAdvisor.builder().showAvailableTools(false).showSystemMessage(false).build()
+//                        MyLoggingAdvisor.builder().showAvailableTools(false).showSystemMessage(false).build()
+                        SimpleLoggerAdvisor.builder().build()
                 )
                 .build();
 
@@ -94,7 +96,11 @@ public class AiRagController {
                 .user(message)
                 .system(p -> p.text(SYSTEM_PROMPT)
                         .param("current_date", LocalDate.now().toString()))
+                // 传 userMessage，供 MetadataAwareQuestionAnswerAdvisor 使用
+                .advisors(advisorSpec -> advisorSpec.param("userMessage", message))
+                // 传会话 ID
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId))
+                // 1. 检索
                 .advisors(QuestionAnswerAdvisor.builder(vectorStore)
                         .searchRequest(SearchRequest.builder()
                                 .query(message)
@@ -102,6 +108,8 @@ public class AiRagController {
                                 .topK(5)
                                 .build())
                         .build())
+                // 2. 拼装来源
+                .advisors(new MetadataAwareQuestionAnswerAdvisor())
                 .stream()
                 .content();
     }

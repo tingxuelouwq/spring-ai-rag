@@ -40,27 +40,13 @@ public class SensitiveWordController {
     }
 
     /**
-     * 删除敏感词
-     *
-     * @param id 敏感词 ID
-     * @return 操作结果
-     */
-    @Operation(summary = "删除敏感词")
-    @DeleteMapping("/{id}")
-    public BaseResponse<Void> deleteSensitiveWord(@PathVariable("id") Long id) {
-        log.info("删除敏感词：id={}", id);
-        sensitiveWordService.removeWord(id);
-        return ResultUtils.success(null, "删除成功");
-    }
-
-    /**
      * 批量删除敏感词
      *
      * @param ids 敏感词 ID 列表
      * @return 操作结果
      */
     @Operation(summary = "批量删除敏感词")
-    @PostMapping("/batch")
+    @DeleteMapping("/batch")
     public BaseResponse<Void> deleteSensitiveWords(@RequestBody List<Long> ids) {
         log.info("批量删除敏感词：count={}", ids == null ? 0 : ids.size());
         sensitiveWordService.removeWords(ids);

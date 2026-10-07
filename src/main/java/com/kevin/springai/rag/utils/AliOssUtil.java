@@ -232,4 +232,33 @@ public class AliOssUtil {
         OSSObject ossObject = ossClient.getObject(bucketName, objectName);
         return ossObject.getObjectContent();
     }
+
+    /**
+     * 生成带签名的临时预览 URL（浏览器内联打开）
+     *
+     * @param fileUrl       文件的完整访问地址
+     * @param fileName      展示的文件名
+     * @param expireSeconds 有效期（秒）
+     * @return 签名 URL
+     */
+    public String generatePreviewUrl(String fileUrl, String fileName, long expireSeconds) {
+        String objectName = extractObjectName(fileUrl);
+        Date expiration = new Date(System.currentTimeMillis() + expireSeconds * 1000L);
+
+        GeneratePresignedUrlRequest request =
+                new GeneratePresignedUrlRequest(bucketName, objectName);
+        request.setExpiration(expiration);
+
+        try {
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+            // 关键：inline 而不是 attachment
+            request.getResponseHeaders().setContentDisposition(
+                    "inline; filename=\"" + encodedFileName + "\"");
+        } catch (Exception ex) {
+            log.warn("设置预览文件名失败，fileName={}", fileName, ex);
+        }
+
+        return ossClient.generatePresignedUrl(request).toString();
+    }
 }
