@@ -29,7 +29,7 @@
           <el-table-column prop="word" label="敏感词" width="180" />
           <el-table-column prop="category" label="类别" width="120">
             <template #default="scope">
-              <el-tag>{{ scope.row.category === '1' ? '违禁词' : '其他' }}</el-tag>
+              <el-tag>{{ getCategoryName(scope.row.category) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="120">
@@ -41,8 +41,15 @@
           </el-table-column>
           <el-table-column prop="createdAt" label="创建时间" width="180" />
           <el-table-column prop="updatedAt" label="更新时间" width="180" />
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="scope">
+              <el-button
+                  :type="scope.row.status === '1' ? 'warning' : 'success'"
+                  size="small"
+                  @click="handleToggleStatus(scope.row)"
+              >
+                {{ scope.row.status === '1' ? '禁用' : '启用' }}
+              </el-button>
               <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
             </template>
           </el-table-column>
@@ -80,8 +87,12 @@
         </el-form-item>
         <el-form-item label="类别" prop="category">
           <el-select v-model="sensitiveForm.category" placeholder="请选择类别">
-            <el-option label="违禁词" value="1" />
-            <el-option label="其他" value="2" />
+            <el-option
+                v-for="item in categoryOptions"
+                :key="item.id"
+                :label="item.categoryName"
+                :value="String(item.id)"
+            />
           </el-select>
         </el-form-item>
       </el-form>
@@ -99,14 +110,18 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { 
-  querySensitiveApi, 
-  addSensitiveApi, 
+import {
+  querySensitiveApi,
+  addSensitiveApi,
   batchDeleteSensitiveApi,
-  type SensitiveInfo 
+  updateSensitiveStatusApi,
+  queryCategoryListApi,
+  type SensitiveInfo,
+  type CategoryInfo
 } from '@/api/SensitiveApi'
 
 const sensitiveList = ref<SensitiveInfo[]>([])
+const categoryOptions = ref<CategoryInfo[]>([])
 const total = ref(0)
 const selectedIds = ref<number[]>([])
 const dialogVisible = ref(false)
@@ -145,8 +160,8 @@ const loadSensitiveList = async () => {
     }
     const res = await querySensitiveApi(params)
     if (res.code === 0) {
-      sensitiveList.value = res.data.records
-      total.value = res.data.total
+      sensitiveList.value = res.data.content
+      total.value = res.data.totalElements
     } else {
       ElMessage.error(res.message || '获取敏感词列表失败')
     }
@@ -158,6 +173,28 @@ const loadSensitiveList = async () => {
   }
 }
 
+// 加载分类选项（只显示启用状态的分类）
+const loadCategoryOptions = async () => {
+  try {
+    const res = await queryCategoryListApi()
+    console.log('分类列表:', res.data)
+    if (res.code === 0) {
+      categoryOptions.value = res.data.filter((item: CategoryInfo) => item.status === '1')
+      console.log('过滤后 categoryOptions:', categoryOptions.value)
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+  }
+}
+
+// 根据分类 ID 查找分类名称
+const getCategoryName = (categoryId: string | number) => {
+  const found = categoryOptions.value.find(
+      item => String(item.id) === String(categoryId)
+  )
+  return found ? found.categoryName : '未知'
+}
+
 // 处理多选
 const handleSelectionChange = (selection: SensitiveInfo[]) => {
   selectedIds.value = selection.map(item => item.id)
@@ -167,7 +204,9 @@ const handleSelectionChange = (selection: SensitiveInfo[]) => {
 const handleAdd = () => {
   sensitiveForm.value = {
     word: '',
-    category: '1'
+    category: categoryOptions.value.length > 0
+        ? String(categoryOptions.value[0].id)
+        : ''
   }
   dialogVisible.value = true
 }
@@ -231,6 +270,37 @@ const handleBatchDelete = (ids?: number[]) => {
   })
 }
 
+// 启用/禁用敏感词
+const handleToggleStatus = (row: SensitiveInfo) => {
+  const targetStatus = row.status === '1' ? '0' : '1'
+  const actionText = targetStatus === '1' ? '启用' : '禁用'
+
+  ElMessageBox.confirm(
+      `确定要${actionText}敏感词「${row.word}」吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+  ).then(async () => {
+    try {
+      const res = await updateSensitiveStatusApi(targetStatus, row.id)
+      if (res.code === 0) {
+        ElMessage.success(`${actionText}成功`)
+        loadSensitiveList()
+      } else {
+        ElMessage.error(res.message || `${actionText}失败`)
+      }
+    } catch (error) {
+      console.error('更新敏感词状态失败:', error)
+      ElMessage.error(`${actionText}失败，请稍后重试`)
+    }
+  }).catch(() => {
+    ElMessage.info('已取消操作')
+  })
+}
+
 // 分页处理
 const handleSizeChange = (val: number) => {
   queryParams.value.size = val
@@ -245,6 +315,7 @@ const handleCurrentChange = (val: number) => {
 
 onMounted(() => {
   loadSensitiveList()
+  loadCategoryOptions()
 })
 </script>
 

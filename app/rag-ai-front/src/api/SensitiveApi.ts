@@ -73,4 +73,30 @@ export const batchDeleteCategoryApi = async (ids: number[]): Promise<Res> => {
 // 更新敏感词分类
 export const updateCategoryApi = async (data: CategoryUpdateDto): Promise<Res> => {
   return service.put(SensitiveApi.CategoryUpdate, data);
-}; 
+};
+
+/**
+ * 启用/禁用敏感词分类
+ */
+export const updateCategoryStatusApi = (status: string, id: number) => {
+  return service.post(`/category/status/${status}`, null, {
+    params: { id }
+  })
+}
+
+/**
+ * 启用/禁用敏感词
+ */
+export const updateSensitiveStatusApi = (status: string, id: number) => {
+  return service.post(`/sensitive/status/${status}`, null, {
+    params: { id }
+  })
+}
+
+/**
+ * 获取全部分类列表
+ */
+export const queryCategoryListApi = async () => {
+  const response = await service.get('/category/list')
+  return response
+}

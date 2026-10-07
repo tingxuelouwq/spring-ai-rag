@@ -46,6 +46,11 @@ spring:
           min-idle: 1
           max-wait: 2000ms
 
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
 aliyun:
   alioss:
     endpoint: https://oss-cn-beijing.aliyuncs.com
@@ -63,3 +68,4 @@ jwt:
   user-secret-key: rag_jwt_secret_key_for_user_access_256_bits_required
   user-ttl: 7200000
   user-token-name: authorization
+

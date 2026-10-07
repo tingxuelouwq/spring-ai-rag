@@ -36,9 +36,16 @@
           </el-table-column>
           <el-table-column prop="createdTime" label="创建时间" width="180"/>
           <el-table-column prop="updateTime" label="更新时间" width="180"/>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="scope">
               <el-button type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+              <el-button
+                  :type="scope.row.status === '1' ? 'warning' : 'success'"
+                  size="small"
+                  @click="handleToggleStatus(scope.row)"
+              >
+                {{ scope.row.status === '1' ? '禁用' : '启用' }}
+              </el-button>
               <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
             </template>
           </el-table-column>
@@ -93,6 +100,7 @@ import {
   queryCategoryPageApi, 
   updateCategoryApi,
   batchDeleteCategoryApi,
+  updateCategoryStatusApi,
   type CategoryInfo,
   type CategoryUpdateDto 
 } from '@/api/SensitiveApi'
@@ -127,14 +135,14 @@ const loadCategoryData = async () => {
   isLoading.value = true
   try {
     const response = await queryCategoryPageApi({
-      page: currentPage.value,
+      page: currentPage.value - 1,
       size: pageSize.value
     })
     
     if (response.code === 0) {
       const data = response.data
-      categoryList.value = data.records
-      total.value = data.total
+      categoryList.value = data.content
+      total.value = data.totalElements
     } else {
       ElMessage.error(response.message || '获取数据失败')
     }
@@ -246,6 +254,37 @@ const handleBatchDelete = () => {
     }
   }).catch(() => {
     ElMessage.info('已取消批量删除')
+  })
+}
+
+// 启用/禁用分类
+const handleToggleStatus = (row: CategoryInfo) => {
+  const targetStatus = row.status === '1' ? '0' : '1'
+  const actionText = targetStatus === '1' ? '启用' : '禁用'
+
+  ElMessageBox.confirm(
+      `确定要${actionText}分类 ${row.categoryName} 吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+  ).then(async () => {
+    try {
+      const response = await updateCategoryStatusApi(targetStatus, row.id)
+      if (response.code === 0) {
+        ElMessage.success(`${actionText}成功`)
+        loadCategoryData()
+      } else {
+        ElMessage.error(response.message || `${actionText}失败`)
+      }
+    } catch (error) {
+      console.error('更新分类状态失败:', error)
+      ElMessage.error(`${actionText}失败，请稍后重试`)
+    }
+  }).catch(() => {
+    ElMessage.info('已取消操作')
   })
 }
 
