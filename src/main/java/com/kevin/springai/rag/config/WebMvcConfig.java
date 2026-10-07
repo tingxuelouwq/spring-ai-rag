@@ -2,7 +2,6 @@ package com.kevin.springai.rag.config;
 
 import com.kevin.springai.rag.constant.BizConstant;
 import com.kevin.springai.rag.interceptor.JwtTokenUserInterceptor;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * Web MVC 全局配置
  * <p>
- * 负责注册拦截器、声明 ETL 组件和 ChatClient 等基础 Bean。
+ * 负责注册拦截器、声明 ETL 组件等基础 Bean。
  * </p>
  *
  * @author xushu
@@ -47,18 +46,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Bean
     public TokenTextSplitter tokenTextSplitter() {
         return TokenTextSplitter.builder().build();
-    }
-
-    /**
-     * 全局 ChatClient，设置默认系统提示词
-     *
-     * @param builder Spring AI 自动装配的 ChatClient.Builder
-     * @return 配置好的 ChatClient 实例
-     */
-    @Bean
-    public ChatClient chatClient(ChatClient.Builder builder) {
-        return builder.defaultSystem("你是一个乐于助人解决问题的AI机器人")
-                .build();
     }
 
     /**

@@ -4,16 +4,14 @@ import com.kevin.springai.rag.advisor.MetadataAwareQuestionAnswerAdvisor;
 import com.kevin.springai.rag.annotation.Loggable;
 import com.kevin.springai.rag.constant.BizConstant;
 import com.kevin.springai.rag.context.BaseContext;
+import com.kevin.springai.rag.router.ModelRouter;
 import com.kevin.springai.rag.service.SensitiveWordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.milvus.MilvusVectorStore;
@@ -51,23 +49,14 @@ public class AiRagController {
         """;
 
     private final SensitiveWordService sensitiveWordService;
-    private final ChatClient chatClient;
     private final VectorStore vectorStore;
+    private final ModelRouter modelRouter;
 
     public AiRagController(SensitiveWordService sensitiveWordService,
-                           ChatModel chatModel,
-                           ChatMemory chatMemory,
+                           ModelRouter modelRouter,
                            MilvusVectorStore milvusVectorStore) {
         this.sensitiveWordService = sensitiveWordService;
-
-        this.chatClient = ChatClient.builder(chatModel)
-                .defaultAdvisors(
-                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
-//                        MyLoggingAdvisor.builder().showAvailableTools(false).showSystemMessage(false).build()
-                        SimpleLoggerAdvisor.builder().build()
-                )
-                .build();
-
+        this.modelRouter = modelRouter;
         this.vectorStore = milvusVectorStore;
     }
 
@@ -81,7 +70,8 @@ public class AiRagController {
     @PostMapping(value = "/rag")
     @Loggable
     public Flux<String> generatePost(
-            @RequestParam(value = "message", defaultValue = "你好") String message) throws IOException {
+            @RequestParam(value = "message", defaultValue = "你好") String message,
+            @RequestParam(value = "model", required = false) String model) throws IOException {
         log.info("rag请求start...");
 
         // 敏感词过滤
@@ -92,14 +82,18 @@ public class AiRagController {
 
         Long userId = BaseContext.getCurrentId();
 
-        return chatClient.prompt()
+        ChatClient chatClient = modelRouter.getClient(model);
+
+        ChatClient.ChatClientRequestSpec spec = chatClient.prompt()
                 .user(message)
                 .system(p -> p.text(SYSTEM_PROMPT)
                         .param("current_date", LocalDate.now().toString()))
                 // 传 userMessage，供 MetadataAwareQuestionAnswerAdvisor 使用
                 .advisors(advisorSpec -> advisorSpec.param("userMessage", message))
                 // 传会话 ID
-                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId))
+                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId));
+
+        return spec
                 // 1. 检索
                 .advisors(QuestionAnswerAdvisor.builder(vectorStore)
                         .searchRequest(SearchRequest.builder()

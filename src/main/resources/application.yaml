@@ -6,11 +6,12 @@ spring:
     name: spring-ai-rag
 
   ai:
+    chat:
+      client:
+        enabled: false
     openai:
       api-key: ${ALI_AI_KEY}
       base-url: https://llm-6uhvu1htgn8qsa6c.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
-      chat:
-        model: qwen3.8-max-0902
       embedding:
         model: qwen3.7-text-embedding-flash
 

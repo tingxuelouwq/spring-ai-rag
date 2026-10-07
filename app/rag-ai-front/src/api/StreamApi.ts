@@ -1,13 +1,12 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source";
-import {BASE_URL} from "@/http/config.ts";
+import { BASE_URL } from "@/http/config.ts";
 import service from "@/http";
 
 class FatalError extends Error {}
-class RetriableError extends Error {}
-
 type ResultCallBack = (e: any | null) => void;
 
 const BaseUrl = BASE_URL;
+
 export const postStreamChat = (
     author: string,
     onMessage: ResultCallBack,
@@ -39,41 +38,54 @@ export const postStreamChat = (
                 response.status < 500 &&
                 response.status !== 429
             ) {
-                // 不再抛出FatalError，防止自动重试
-                // 直接调用onError回调
                 onError(new Error(`HTTP ${response.status}: ${response.statusText}`));
-                // 返回一个永远不会resolve的Promise，终止连接
                 return new Promise(() => {});
             } else {
-                // 不再抛出RetriableError，防止自动重试
-                // 直接调用onError回调
                 onError(new Error(`HTTP ${response.status}: ${response.statusText}`));
-                // 返回一个永远不会resolve的Promise，终止连接
                 return new Promise(() => {});
             }
         },
     });
 };
 
+/**
+ * 通用流式对话
+ *
+ * @param message   用户消息
+ * @param url       接口地址
+ * @param onMessage 收到消息回调
+ * @param onError   错误回调
+ * @param onClose   关闭回调
+ * @param sources   数据源文件名列表（可选）
+ * @param model     大模型名称（可选）
+ */
 export const getStreamChat = (
     message: string,
     url: string = "/chat/stream",
     onMessage: ResultCallBack,
     onError: ResultCallBack,
     onClose: ResultCallBack,
-    sources?: string[]
+    sources?: string[],
+    model?: string
 ) => {
     const ctrl = new AbortController();
-    
-    // 统一使用POST请求发送数据
+
+    // 统一使用 POST 请求发送数据
     const formData = new FormData();
     formData.append('message', message);
+
+    // 可选：数据源
     if (sources && sources.length > 0) {
         sources.forEach(source => {
             formData.append('sources', source);
         });
     }
-    
+
+    // 可选：大模型
+    if (model) {
+        formData.append('model', model);
+    }
+
     fetchEventSource(service.defaults.baseURL + url, {
         method: "POST",
         headers: {
@@ -91,25 +103,32 @@ export const getStreamChat = (
         onopen: async (response: any) => {
             if (response.ok) {
                 return;
-            } 
+            }
             else if (response.status === 401) {
-                // 处理401未授权错误
+                // 处理 401 未授权错误
                 import('@/api/authUtils').then(module => {
-                module.default();
+                    module.default();
                 });
             }
-            else{
-                // 不再抛出RetriableError，防止自动重试
-                // 直接调用onError回调
+            else {
                 onError(new Error(`HTTP ${response.status}: ${response.statusText}`));
-                // 返回一个永远不会resolve的Promise，终止连接
                 return new Promise(() => {});
             }
         },
     });
 };
 
-// 专门用于POST请求的流式聊天函数
+/**
+ * 专门用于 POST 请求的流式 RAG 对话
+ *
+ * @param message   用户消息
+ * @param sources   数据源文件名列表
+ * @param url       接口地址
+ * @param onMessage 收到消息回调
+ * @param onError   错误回调
+ * @param onClose   关闭回调
+ * @param model     大模型名称（可选）
+ */
 export const postStreamChatWithSources = (
     message: string,
     sources: string[],
@@ -117,15 +136,19 @@ export const postStreamChatWithSources = (
     onMessage: ResultCallBack,
     onError: ResultCallBack,
     onClose: ResultCallBack,
+    model?: string
 ) => {
     const ctrl = new AbortController();
-    
+
     const formData = new FormData();
     formData.append('message', message);
     sources.forEach(source => {
         formData.append('sources', source);
     });
-    
+    if (model) {
+        formData.append('model', model);
+    }
+
     fetchEventSource(service.defaults.baseURL + url, {
         method: "POST",
         headers: {
@@ -143,18 +166,14 @@ export const postStreamChatWithSources = (
         onopen: async (response: any) => {
             if (response.ok) {
                 return;
-            } 
+            }
             else if (response.status === 401) {
-                // 处理401未授权错误
                 import('@/api/authUtils').then(module => {
-                module.default();
+                    module.default();
                 });
             }
-            else{
-                // 不再抛出RetriableError，防止自动重试
-                // 直接调用onError回调
+            else {
                 onError(new Error(`HTTP ${response.status}: ${response.statusText}`));
-                // 返回一个永远不会resolve的Promise，终止连接
                 return new Promise(() => {});
             }
         },
