@@ -69,3 +69,6 @@ jwt:
   user-ttl: 7200000
   user-token-name: authorization
 
+logging:
+  level:
+    com.kevin.springai.rag.advisor: DEBUG
