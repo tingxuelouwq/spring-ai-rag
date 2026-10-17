@@ -21,8 +21,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
-import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * RAG 对话接口
@@ -71,8 +72,10 @@ public class AiRagController {
     @Loggable
     public Flux<String> generatePost(
             @RequestParam(value = "message", defaultValue = "你好") String message,
-            @RequestParam(value = "model", required = false) String model) throws IOException {
-        log.info("rag请求start...");
+            @RequestParam(value = "model", required = false) String model,
+            @RequestParam(value = "sources", required = false) List<String> sources) {
+
+        log.info("rag请求start... 参数: message={}, sources={}", message, sources);
 
         // 敏感词过滤
         String hitWord = sensitiveWordService.findHitWord(message);
@@ -81,9 +84,27 @@ public class AiRagController {
         }
 
         Long userId = BaseContext.getCurrentId();
-
         ChatClient chatClient = modelRouter.getClient(model);
 
+        // 2. 构建动态的 SearchRequest
+        SearchRequest.Builder searchRequestBuilder = SearchRequest.builder()
+                .query(message)
+                .similarityThreshold(0.1d)
+                .topK(5);
+
+        // 3. 如果传入了文件限制，添加 Milvus 过滤表达式
+        if (sources != null && !sources.isEmpty()) {
+            // 转义可能存在的双引号，防止表达式解析错误
+            String filterExpr = sources.stream()
+                    .map(s -> "\"" + s.replace("\"", "\\\"") + "\"")
+                    .collect(Collectors.joining(", "));
+
+            // 注意：这里的 "source" 需要与你在向量化写入数据库时设置的 metadata key 保持一致
+            searchRequestBuilder.filterExpression("source in [" + filterExpr + "]");
+            log.info("应用文件过滤条件: {}", searchRequestBuilder.build().getFilterExpression());
+        }
+
+        // 4. 构建请求
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt()
                 .user(message)
                 .system(p -> p.text(SYSTEM_PROMPT)
@@ -94,52 +115,13 @@ public class AiRagController {
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId));
 
         return spec
-                // 1. 检索
+                // 5. 挂载 Advisor，使用动态构建的 SearchRequest
                 .advisors(QuestionAnswerAdvisor.builder(vectorStore)
-                        .searchRequest(SearchRequest.builder()
-                                .query(message)
-                                .similarityThreshold(0.1d)
-                                .topK(5)
-                                .build())
+                        .searchRequest(searchRequestBuilder.build())
                         .build())
-                // 2. 拼装来源
+                // 6. 拼装来源
                 .advisors(new MetadataAwareQuestionAnswerAdvisor())
                 .stream()
                 .content();
     }
-
-//    /**
-//     * 处理正常的 RAG 查询
-//     *
-//     * @param sources 数据源列表
-//     * @param message 用户消息
-//     * @return 响应流
-//     */
-//    private Flux<String> processNormalRagQuery(List<String> sources, String message) {
-//        Long userId = BaseContext.getCurrentId();
-//
-//        ChatClient.ChatClientRequestSpec clientRequestSpec = chatClient.prompt()
-//                .user(message)
-//                .system(a -> a.param("current_data", LocalDate.now().toString()))
-//                .advisors(a -> a.param("userMessage", message))
-//                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, userId));
-//
-//        // 如果提供了 sources 参数，使用向量数据库查询
-//        if (sources != null && !sources.isEmpty()) {
-//            SearchRequest searchRequest = SearchRequest.builder()
-//                    .query(message)
-//                    .similarityThreshold(0.1d)
-//                    .topK(5)
-//                    .filterExpression("source in " + JSON.toJSONString(sources))
-//                    .build();
-//
-//            clientRequestSpec = clientRequestSpec
-//                    .system(a -> a.param("rag_message", RAG_SYSTEM_PROMPT))
-//                    .advisors(QuestionAnswerAdvisor.builder(vectorStore)
-//                            .searchRequest(searchRequest)
-//                            .build());
-//        }
-//
-//        return clientRequestSpec.stream().content();
-//    }
 }
