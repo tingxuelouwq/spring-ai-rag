@@ -9,6 +9,7 @@ import com.kevin.springai.rag.service.SensitiveWordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -83,16 +84,32 @@ public class AiRagController {
             return Flux.just("包含敏感词:" + hitWord);
         }
 
-        Long userId = BaseContext.getCurrentId();
         ChatClient chatClient = modelRouter.getClient(model);
 
-        // 2. 构建动态的 SearchRequest
+        boolean isSql = chatClient.prompt()
+                .system("用户的查询是否涉及统计数据、求和、计数、平均值等聚合操作？")
+                .user(message)
+                .call()
+                .entity(Boolean.class);
+
+        if (isSql) {    // 如果是聚合操作，则使用SuperSQL生成SQL
+
+            return null;
+        } else {        // 如果不是聚合操作，则执行正常的RAG处理
+            return processNormalRagQuery(message, sources, chatClient);
+        }
+    }
+
+    private @NonNull Flux<String> processNormalRagQuery(String message, List<String> sources, ChatClient chatClient) {
+        Long userId = BaseContext.getCurrentId();
+
+        // 1. 构建动态的 SearchRequest
         SearchRequest.Builder searchRequestBuilder = SearchRequest.builder()
                 .query(message)
                 .similarityThreshold(0.1d)
                 .topK(5);
 
-        // 3. 如果传入了文件限制，添加 Milvus 过滤表达式
+        // 2. 如果传入了文件限制，添加 Milvus 过滤表达式
         if (sources != null && !sources.isEmpty()) {
             // 转义可能存在的双引号，防止表达式解析错误
             String filterExpr = sources.stream()
@@ -104,7 +121,7 @@ public class AiRagController {
             log.info("应用文件过滤条件: {}", searchRequestBuilder.build().getFilterExpression());
         }
 
-        // 4. 构建请求
+        // 3. 构建请求
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt()
                 .user(message)
                 .system(p -> p.text(SYSTEM_PROMPT)
@@ -115,11 +132,11 @@ public class AiRagController {
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId));
 
         return spec
-                // 5. 挂载 Advisor，使用动态构建的 SearchRequest
+                // 4. 挂载 Advisor，使用动态构建的 SearchRequest
                 .advisors(QuestionAnswerAdvisor.builder(vectorStore)
                         .searchRequest(searchRequestBuilder.build())
                         .build())
-                // 6. 拼装来源
+                // 5. 拼装来源
                 .advisors(new MetadataAwareQuestionAnswerAdvisor())
                 .stream()
                 .content();

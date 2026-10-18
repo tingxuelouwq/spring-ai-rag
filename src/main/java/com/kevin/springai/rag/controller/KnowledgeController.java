@@ -40,6 +40,11 @@ public class KnowledgeController {
      * 上传附件
      * <p>
      * 完成文件上传 OSS、按指定策略分片、向量化、持久化数据库的完整流程。
+     *
+     * 1. 提供不同的分片策略
+     * 2. 分片后的预览
+     *
+     * text-to-sql：上传资料->（用户选择是否聚合）->tosql->创建表、插入数据
      * </p>
      *
      * @param files    上传的文件列表
